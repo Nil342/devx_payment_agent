@@ -3,6 +3,20 @@ import { db, invoicesTable, vendorsTable, decisionsTable, exceptionsTable, setti
 import { eq, desc, and, sql } from "drizzle-orm";
 import { orchestrateInvoiceAnalysis } from "../agents/orchestrator";
 import { runOcrAgent } from "../agents/ocr-agent";
+import multer from "multer";
+import { logger } from "../lib/logger";
+
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
+// Polyfill DOMMatrix for pdf-parse in modern Node.js environments
+if (typeof (globalThis as any).DOMMatrix === "undefined") {
+  (globalThis as any).DOMMatrix = class DOMMatrix {} as any;
+}
+const pdfParse = require("pdf-parse");
+import Tesseract from "tesseract.js";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router: IRouter = Router();
 
@@ -43,9 +57,20 @@ router.get("/invoices", async (req, res): Promise<void> => {
 });
 
 router.post("/invoices", async (req, res): Promise<void> => {
-  const { vendorId, invoiceNumber, invoiceDate, dueDate, amount, taxAmount, paymentTerms, description } = req.body;
+  const { vendorId, invoiceNumber, invoiceDate, dueDate, amount, taxAmount, paymentTerms, description, fileUrl } = req.body;
   if (!vendorId || !invoiceNumber || amount == null) {
     res.status(400).json({ error: "vendorId, invoiceNumber, and amount are required" });
+    return;
+  }
+
+  // Check for duplicate invoice number for the same vendor
+  const [existing] = await db
+    .select()
+    .from(invoicesTable)
+    .where(and(eq(invoicesTable.vendorId, Number(vendorId)), eq(invoicesTable.invoiceNumber, invoiceNumber)));
+
+  if (existing) {
+    res.status(409).json({ error: "Invoice with this number already exists for this vendor" });
     return;
   }
 
@@ -58,7 +83,13 @@ router.post("/invoices", async (req, res): Promise<void> => {
     taxAmount: taxAmount != null ? String(taxAmount) : null,
     paymentTerms: paymentTerms ?? null,
     description: description ?? null,
+    fileUrl: fileUrl ?? null,
   }).returning();
+
+  // Update vendor totals
+  await db.execute(
+    sql`UPDATE ${vendorsTable} SET "totalInvoices" = "totalInvoices" + 1, "totalAmount" = "totalAmount" + ${amount} WHERE id = ${vendorId}`
+  );
 
   const full = await db
     .select({ id: invoicesTable.id, vendorId: invoicesTable.vendorId, vendorName: vendorsTable.name, invoiceNumber: invoicesTable.invoiceNumber, invoiceDate: invoicesTable.invoiceDate, dueDate: invoicesTable.dueDate, amount: invoicesTable.amount, taxAmount: invoicesTable.taxAmount, paymentTerms: invoicesTable.paymentTerms, description: invoicesTable.description, status: invoicesTable.status, riskLevel: invoicesTable.riskLevel, riskScore: invoicesTable.riskScore, assignedReviewer: invoicesTable.assignedReviewer, fileUrl: invoicesTable.fileUrl, extractedData: invoicesTable.extractedData, createdAt: invoicesTable.createdAt, updatedAt: invoicesTable.updatedAt })
@@ -113,11 +144,42 @@ router.post("/invoices/:id/analyze", async (req, res): Promise<void> => {
   res.json(analysis);
 });
 
-router.post("/invoices/upload", async (req, res): Promise<void> => {
-  const { text } = req.body;
-  if (!text) { res.status(400).json({ error: "text is required" }); return; }
-  const result = await runOcrAgent(text);
-  res.json(result);
+router.post("/invoices/upload", upload.single("file"), async (req, res): Promise<void> => {
+  if (!req.file) { res.status(400).json({ error: "file is required" }); return; }
+
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const publicDir = path.join(process.cwd(), 'public');
+    const uploadsDir = path.join(publicDir, 'uploads');
+    if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir);
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+    
+    const fileName = `${Date.now()}-${req.file.originalname || 'upload'}`;
+    fs.writeFileSync(path.join(uploadsDir, fileName), req.file.buffer);
+    const fileUrl = `/uploads/${fileName}`;
+
+    try {
+      const ocrData = await runOcrAgent(req.file.buffer, req.file.mimetype);
+      res.json({ ...ocrData, fileUrl });
+    } catch (error: any) {
+      logger.error({ err: error?.message, stack: error?.stack }, "OCR agent failed, using fallback data");
+      res.json({
+        vendorName: "Unknown Vendor",
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        invoiceDate: new Date().toISOString().split('T')[0],
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        amount: 0,
+        taxAmount: null,
+        paymentTerms: "Net 30",
+        rawText: "Extraction failed or unsupported file type",
+        fileUrl
+      });
+    }
+  } catch (error: any) {
+    logger.error({ err: error?.message, stack: error?.stack, mimetype: req.file?.mimetype }, "Invoice upload processing failed");
+    res.status(500).json({ error: `Error processing the file: ${error?.message || "Unknown error"}` });
+  }
 });
 
 router.get("/dashboard/stats", async (_req, res): Promise<void> => {

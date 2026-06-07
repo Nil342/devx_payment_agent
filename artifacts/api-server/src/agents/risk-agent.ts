@@ -5,6 +5,7 @@ import { logger } from "../lib/logger";
 const SYSTEM_PROMPT = `You are a financial risk assessment AI for an Accounts Payable system.
 Analyze invoice and vendor data to calculate risk scores.
 Consider: vendor dispute history, invoice amount vs thresholds, tax mismatches, duplicate patterns.
+IMPORTANT: You have an institutional memory of past exceptions. If an exception was resolved (e.g., vendor agreed to adjust tax), learn from the resolution notes and lower the risk if the current invoice matches the resolved pattern.
 Be precise and data-driven. Return only valid JSON.`;
 
 export async function runRiskAgent(
@@ -31,7 +32,7 @@ Vendor: ${vendorMemory.vendorName}
 - Dispute Rate: ${vendorMemory.disputeRate}%
 - Total Past Invoices: ${vendorMemory.totalInvoices}
 - Recent Exceptions (${vendorMemory.recentExceptions.length}):
-${vendorMemory.recentExceptions.map((e) => `  * [${e.severity}] ${e.type}: ${e.description}`).join("\n") || "  None"}
+${vendorMemory.recentExceptions.map((e) => `  * [${e.severity}] ${e.type}: ${e.description} ${e.resolved ? `(RESOLVED: ${e.resolvedNotes})` : "(OPEN)"}`).join("\n") || "  None"}
 - Recent Decisions:
 ${vendorMemory.recentDecisions.slice(0, 5).map((d) => `  * ${d.action}: ${d.reasoning}`).join("\n") || "  None"}
 
@@ -65,8 +66,8 @@ export function calculateBasicRisk(
   if (vendorMemory.disputeRate > 30) { riskScore += 25; riskFactors.push(`High dispute rate: ${vendorMemory.disputeRate}%`); }
   else if (vendorMemory.disputeRate > 10) { riskScore += 10; riskFactors.push(`Elevated dispute rate: ${vendorMemory.disputeRate}%`); }
 
-  const recentHighExceptions = vendorMemory.recentExceptions.filter((e) => e.severity === "high").length;
-  if (recentHighExceptions > 0) { riskScore += recentHighExceptions * 10; riskFactors.push(`${recentHighExceptions} high-severity exceptions`); }
+  const recentHighExceptions = vendorMemory.recentExceptions.filter((e) => e.severity === "high" && !e.resolved).length;
+  if (recentHighExceptions > 0) { riskScore += recentHighExceptions * 10; riskFactors.push(`${recentHighExceptions} unresolved high-severity exceptions`); }
 
   riskScore = Math.min(100, riskScore);
   const riskLevel = riskScore >= 70 ? "high" : riskScore >= 40 ? "medium" : "low";

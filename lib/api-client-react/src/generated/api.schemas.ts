@@ -116,6 +116,7 @@ export interface InvoiceInput {
   taxAmount?: number;
   paymentTerms?: string;
   description?: string;
+  fileUrl?: string;
 }
 
 export interface InvoiceUpdate {
@@ -158,6 +159,8 @@ export interface OcrResult {
   paymentTerms?: string | null;
   /** @nullable */
   rawText?: string | null;
+  /** @nullable */
+  fileUrl?: string | null;
 }
 
 export interface ExceptionInput {
@@ -166,6 +169,11 @@ export interface ExceptionInput {
   type: string;
   description: string;
   severity: string;
+  notes?: string;
+}
+
+export interface ExceptionUpdate {
+  resolved?: boolean;
   notes?: string;
 }
 
@@ -275,6 +283,10 @@ export type ListInvoicesParams = {
 status?: string;
 vendorId?: number;
 riskLevel?: string;
+};
+
+export type UploadInvoiceBody = {
+  file?: Blob;
 };
 
 export type ListExceptionsParams = {

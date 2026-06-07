@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Brain, Zap } from "lucide-react";
+import { AddMemoryDialog } from "./memory/add-memory-dialog";
 
 const importanceColor = (imp: number | null | undefined) => {
   if (!imp) return "text-muted-foreground";
@@ -80,6 +81,7 @@ export default function MemoryPage() {
             Clear
           </Button>
         )}
+        <AddMemoryDialog />
       </div>
 
       {searchResults && (

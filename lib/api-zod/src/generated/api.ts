@@ -181,7 +181,8 @@ export const CreateInvoiceBody = zod.object({
   "amount": zod.number(),
   "taxAmount": zod.number().optional(),
   "paymentTerms": zod.string().optional(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "fileUrl": zod.string().optional()
 })
 
 
@@ -276,7 +277,7 @@ export const AnalyzeInvoiceResponse = zod.object({
  * @summary Upload invoice text for OCR extraction
  */
 export const UploadInvoiceBody = zod.object({
-  "text": zod.string()
+  "file": zod.instanceof(File).optional()
 })
 
 export const UploadInvoiceResponse = zod.object({
@@ -287,7 +288,8 @@ export const UploadInvoiceResponse = zod.object({
   "amount": zod.number(),
   "taxAmount": zod.number().nullish(),
   "paymentTerms": zod.string().nullish(),
-  "rawText": zod.string().nullish()
+  "rawText": zod.string().nullish(),
+  "fileUrl": zod.string().nullish()
 })
 
 
@@ -326,6 +328,34 @@ export const CreateExceptionBody = zod.object({
   "description": zod.string(),
   "severity": zod.string(),
   "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Update exception
+ */
+export const UpdateExceptionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateExceptionBody = zod.object({
+  "resolved": zod.boolean().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateExceptionResponse = zod.object({
+  "id": zod.number(),
+  "vendorId": zod.number(),
+  "vendorName": zod.string().nullish(),
+  "invoiceId": zod.number(),
+  "invoiceNumber": zod.string().nullish(),
+  "type": zod.string(),
+  "description": zod.string(),
+  "severity": zod.string(),
+  "resolved": zod.boolean().optional(),
+  "resolvedAt": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
 })
 
 

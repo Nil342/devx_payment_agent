@@ -44,6 +44,8 @@ export async function retrieveVendorMemory(vendorId: number): Promise<VendorMemo
       type: e.type,
       description: e.description,
       severity: e.severity,
+      resolved: e.resolved ?? false,
+      resolvedNotes: e.notes,
       createdAt: e.createdAt.toISOString(),
     })),
     recentDecisions: decisions.map((d) => ({

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, CheckCircle, Clock } from "lucide-react";
+import { ResolveExceptionDialog } from "./exceptions/resolve-exception-dialog";
 
 export default function ExceptionsPage() {
   const [search, setSearch] = useState("");
@@ -81,9 +82,12 @@ export default function ExceptionsPage() {
                         <CheckCircle className="w-3 h-3" /> Resolved {formatDate(ex.resolvedAt)}
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-xs text-amber-600">
-                        <Clock className="w-3 h-3" /> Open
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-xs text-amber-600">
+                          <Clock className="w-3 h-3" /> Open
+                        </span>
+                        <ResolveExceptionDialog exceptionId={ex.id} />
+                      </div>
                     )}
                   </div>
                   <p className="text-sm text-foreground leading-relaxed">{ex.description}</p>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
+import { AddInvoiceDialog } from "./add-invoice-dialog";
 
 function getInitialFilter(name: string, fallback = "all"): string {
   if (typeof window === "undefined") return fallback;
@@ -76,6 +77,7 @@ export default function InvoicesPage() {
             <SelectItem value="high">High</SelectItem>
           </SelectContent>
         </Select>
+        <AddInvoiceDialog />
       </div>
 
       <div className="bg-white/80 backdrop-blur-sm border border-border/60 rounded-xl shadow-sm overflow-hidden">

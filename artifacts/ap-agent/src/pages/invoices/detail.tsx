@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   useGetInvoice, useAnalyzeInvoice, useGetVendorIntelligence,
-  useUpdateInvoice, getGetInvoiceQueryKey, getGetVendorIntelligenceQueryKey,
-  getListInvoicesQueryKey, getGetDashboardStatsQueryKey
+  useUpdateInvoice, useListExceptions, useListMemoryEvents,
+  getGetInvoiceQueryKey, getGetVendorIntelligenceQueryKey,
+  getListInvoicesQueryKey, getGetDashboardStatsQueryKey,
+  getListExceptionsQueryKey, getListMemoryEventsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Shell } from "@/components/layout/Shell";
@@ -44,6 +46,26 @@ export default function InvoiceDetailPage({ id }: Props) {
       queryKey: getGetVendorIntelligenceQueryKey(invoice?.vendorId ?? 0)
     }
   });
+
+  const { data: exceptions = [] } = useListExceptions(
+    invoice?.vendorId ? { vendorId: invoice.vendorId } : {},
+    {
+      query: {
+        enabled: !!invoice?.vendorId,
+        queryKey: getListExceptionsQueryKey(invoice?.vendorId ? { vendorId: invoice.vendorId } : {})
+      }
+    }
+  );
+
+  const { data: memoryEvents = [] } = useListMemoryEvents(
+    invoice?.vendorId ? { vendorId: invoice.vendorId } : {},
+    {
+      query: {
+        enabled: !!invoice?.vendorId,
+        queryKey: getListMemoryEventsQueryKey(invoice?.vendorId ? { vendorId: invoice.vendorId } : {})
+      }
+    }
+  );
 
   const analyze = useAnalyzeInvoice({
     mutation: {
@@ -342,6 +364,46 @@ export default function InvoiceDetailPage({ id }: Props) {
               <p className="text-xs text-muted-foreground">Loading vendor intelligence...</p>
             )}
           </div>
+
+          {exceptions.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-sm border border-border/60 rounded-xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-semibold text-foreground">Recent Exceptions</h3>
+              </div>
+              <div className="space-y-3">
+                {exceptions.slice(0, 3).map((ex) => (
+                  <div key={ex.id} className="text-xs">
+                    <p className="font-semibold text-foreground flex items-center gap-1.5 mb-0.5">
+                      <Badge className={`text-[9px] px-1.5 py-0 border ${ex.resolved ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {ex.resolved ? 'Resolved' : 'Open'}
+                      </Badge>
+                      {ex.type.replace(/_/g, " ")}
+                    </p>
+                    <p className="text-muted-foreground">{ex.description}</p>
+                    {ex.notes && <p className="text-muted-foreground italic mt-0.5">Notes: {ex.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {memoryEvents.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-sm border border-border/60 rounded-xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Brain className="w-4 h-4 text-blue-500" />
+                <h3 className="text-sm font-semibold text-foreground">Vendor Memory</h3>
+              </div>
+              <div className="space-y-3">
+                {memoryEvents.slice(0, 3).map((m) => (
+                  <div key={m.id} className="text-xs">
+                    <p className="font-semibold text-foreground capitalize mb-0.5">{m.eventType.replace(/_/g, " ")}</p>
+                    <p className="text-muted-foreground">{m.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Shell>

@@ -15,4 +15,5 @@ export interface InvoiceInput {
   taxAmount?: number;
   paymentTerms?: string;
   description?: string;
+  fileUrl?: string;
 }

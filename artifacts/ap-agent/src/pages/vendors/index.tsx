@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
+import { AddVendorDialog } from "./add-vendor-dialog";
 
 export default function VendorsPage() {
   const [, setLocation] = useLocation();
@@ -38,6 +39,7 @@ export default function VendorsPage() {
             className="pl-9 bg-white/80"
           />
         </div>
+        <AddVendorDialog />
       </div>
 
       <div className="bg-white/80 backdrop-blur-sm border border-border/60 rounded-xl shadow-sm overflow-hidden">

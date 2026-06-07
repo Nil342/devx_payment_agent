@@ -20,4 +20,6 @@ export interface OcrResult {
   paymentTerms?: string | null;
   /** @nullable */
   rawText?: string | null;
+  /** @nullable */
+  fileUrl?: string | null;
 }

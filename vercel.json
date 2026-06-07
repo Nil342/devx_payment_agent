@@ -1,0 +1,27 @@
+{
+  "name": "devx-payment-agent",
+  "version": 2,
+  "builds": [
+    {
+      "src": "artifacts/ap-agent/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist/public"
+      }
+    },
+    {
+      "src": "artifacts/api-server/src/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/artifacts/api-server/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/artifacts/ap-agent/dist/public/$1"
+    }
+  ]
+}

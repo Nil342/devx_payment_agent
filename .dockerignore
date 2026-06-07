@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.local
+.git
+.github
+.gitignore
+.vercel
+replit.md
+.replit
+.replitignore
+coverage
+Dockerfile.*
+docker-compose.yml
+.dockerignore

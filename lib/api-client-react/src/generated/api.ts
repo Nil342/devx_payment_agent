@@ -25,6 +25,7 @@ import type {
   DecisionInput,
   Exception,
   ExceptionInput,
+  ExceptionUpdate,
   HealthStatus,
   Invoice,
   InvoiceAnalysis,
@@ -37,10 +38,10 @@ import type {
   MemoryEvent,
   MemoryEventInput,
   MemorySearchInput,
-  OcrInput,
   OcrResult,
   Settings,
   SettingsUpdate,
+  UploadInvoiceBody,
   Vendor,
   VendorInput,
   VendorIntelligence,
@@ -895,15 +896,19 @@ export const getUploadInvoiceUrl = () => {
 /**
  * @summary Upload invoice text for OCR extraction
  */
-export const uploadInvoice = async (ocrInput: OcrInput, options?: RequestInit): Promise<OcrResult> => {
+export const uploadInvoice = async (uploadInvoiceBody: UploadInvoiceBody, options?: RequestInit): Promise<OcrResult> => {
+    const formData = new FormData();
+if(uploadInvoiceBody.file !== undefined) {
+ formData.append(`file`, uploadInvoiceBody.file);
+ }
 
   return customFetch<OcrResult>(getUploadInvoiceUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      ocrInput,)
+    method: 'POST'
+    ,
+    body:
+      formData,
   }
 );}
 
@@ -911,8 +916,8 @@ export const uploadInvoice = async (ocrInput: OcrInput, options?: RequestInit): 
 
 
 export const getUploadInvoiceMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadInvoice>>, TError,{data: BodyType<OcrInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadInvoice>>, TError,{data: BodyType<OcrInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadInvoice>>, TError,{data: BodyType<UploadInvoiceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadInvoice>>, TError,{data: BodyType<UploadInvoiceBody>}, TContext> => {
 
 const mutationKey = ['uploadInvoice'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -924,7 +929,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadInvoice>>, {data: BodyType<OcrInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadInvoice>>, {data: BodyType<UploadInvoiceBody>}> = (props) => {
           const {data} = props ?? {};
 
           return  uploadInvoice(data,requestOptions)
@@ -938,18 +943,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UploadInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof uploadInvoice>>>
-    export type UploadInvoiceMutationBody = BodyType<OcrInput>
+    export type UploadInvoiceMutationBody = BodyType<UploadInvoiceBody>
     export type UploadInvoiceMutationError = ErrorType<unknown>
 
     /**
  * @summary Upload invoice text for OCR extraction
  */
 export const useUploadInvoice = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadInvoice>>, TError,{data: BodyType<OcrInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadInvoice>>, TError,{data: BodyType<UploadInvoiceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof uploadInvoice>>,
         TError,
-        {data: BodyType<OcrInput>},
+        {data: BodyType<UploadInvoiceBody>},
         TContext
       > => {
       return useMutation(getUploadInvoiceMutationOptions(options));
@@ -1108,6 +1113,78 @@ export const useCreateException = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateExceptionMutationOptions(options));
+    }
+
+export const getUpdateExceptionUrl = (id: number,) => {
+
+
+
+
+  return `/api/exceptions/${id}`
+}
+
+/**
+ * @summary Update exception
+ */
+export const updateException = async (id: number,
+    exceptionUpdate: ExceptionUpdate, options?: RequestInit): Promise<Exception> => {
+
+  return customFetch<Exception>(getUpdateExceptionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      exceptionUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateExceptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateException>>, TError,{id: number;data: BodyType<ExceptionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateException>>, TError,{id: number;data: BodyType<ExceptionUpdate>}, TContext> => {
+
+const mutationKey = ['updateException'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateException>>, {id: number;data: BodyType<ExceptionUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateException(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateExceptionMutationResult = NonNullable<Awaited<ReturnType<typeof updateException>>>
+    export type UpdateExceptionMutationBody = BodyType<ExceptionUpdate>
+    export type UpdateExceptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update exception
+ */
+export const useUpdateException = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateException>>, TError,{id: number;data: BodyType<ExceptionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateException>>,
+        TError,
+        {id: number;data: BodyType<ExceptionUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateExceptionMutationOptions(options));
     }
 
 export const getListDecisionsUrl = (params?: ListDecisionsParams,) => {

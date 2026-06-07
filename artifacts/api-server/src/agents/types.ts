@@ -19,6 +19,8 @@ export interface VendorMemory {
     type: string;
     description: string;
     severity: string;
+    resolved: boolean;
+    resolvedNotes: string | null;
     createdAt: string;
   }>;
   recentDecisions: Array<{

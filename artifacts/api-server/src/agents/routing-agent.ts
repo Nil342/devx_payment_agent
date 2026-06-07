@@ -13,20 +13,20 @@ export async function runRoutingAgent(
 ): Promise<RoutingDecision> {
   logger.info({ riskLevel: risk.riskLevel, amount, approvalMode }, "Running routing agent");
 
-  if (approvalMode === "autonomous") {
+  if (approvalMode === "auto") {
     if (risk.riskLevel === "low" && amount <= thresholds.autoApproveThreshold) {
-      return { action: "approve", reasoning: "Autonomous mode: low risk and within auto-approve threshold", confidence: 90 };
+      return { action: "approve", reasoning: "Auto mode: low risk and within auto-approve threshold", confidence: 90 };
     }
     if (risk.riskLevel === "high" || amount > thresholds.cfoReviewThreshold) {
-      return { action: "cfo_review", reasoning: "Autonomous mode: high risk or above CFO threshold", confidence: 95 };
+      return { action: "cfo_review", reasoning: "Auto mode: high risk or above CFO threshold", confidence: 95 };
     }
     if (amount > thresholds.managerReviewThreshold) {
-      return { action: "manager_review", reasoning: "Autonomous mode: amount exceeds manager threshold", confidence: 85 };
+      return { action: "manager_review", reasoning: "Auto mode: amount exceeds manager threshold", confidence: 85 };
     }
     if (risk.riskLevel === "medium") {
-      return { action: "flag", reasoning: "Autonomous mode: medium risk requires review", confidence: 80 };
+      return { action: "flag", reasoning: "Auto mode: medium risk requires review", confidence: 80 };
     }
-    return { action: "approve", reasoning: "Autonomous mode: all checks passed", confidence: 85 };
+    return { action: "approve", reasoning: "Auto mode: all checks passed", confidence: 85 };
   }
 
   if (risk.riskLevel === "high") {
