@@ -26,7 +26,12 @@ export default function InvoicesPage() {
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       ...(riskFilter !== "all" ? { riskLevel: riskFilter } : {}),
     },
-    { query: { queryKey: getListInvoicesQueryKey({ status: statusFilter !== "all" ? statusFilter : undefined, riskLevel: riskFilter !== "all" ? riskFilter : undefined }) } }
+    {
+      query: {
+        queryKey: getListInvoicesQueryKey({ status: statusFilter !== "all" ? statusFilter : undefined, riskLevel: riskFilter !== "all" ? riskFilter : undefined }),
+        refetchInterval: 2_500,
+      },
+    }
   );
 
   const filtered = invoices.filter((inv) =>
@@ -59,6 +64,7 @@ export default function InvoicesPage() {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="processing">Processing</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="flagged">Flagged</SelectItem>
             <SelectItem value="manager_review">Manager Review</SelectItem>

@@ -1,6 +1,6 @@
 import type { ElementType } from "react";
 import { useLocation } from "wouter";
-import { useGetDashboardStats } from "@workspace/api-client-react";
+import { getGetDashboardStatsQueryKey, useGetDashboardStats } from "@workspace/api-client-react";
 import { Shell } from "@/components/layout/Shell";
 import { formatCurrency, riskBg, statusBg } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -71,7 +71,9 @@ function StatCard({
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
-  const { data: stats, isLoading } = useGetDashboardStats();
+  const { data: stats, isLoading } = useGetDashboardStats({
+    query: { queryKey: getGetDashboardStatsQueryKey(), refetchInterval: 3_000 }
+  });
 
   const riskData = stats ? [
     { name: "Low", value: stats.riskDistribution.low, color: "#10b981" },

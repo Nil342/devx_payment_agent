@@ -1,6 +1,7 @@
 import { loadLocalEnv } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startAutopilotAgent } from "./agents/autopilot-agent";
 
 loadLocalEnv();
 
@@ -26,6 +27,7 @@ if (process.env.VERCEL !== "1") {
     }
 
     logger.info({ port }, "Server listening");
+    startAutopilotAgent();
   });
 }
 

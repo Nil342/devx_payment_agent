@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCreateInvoice, useListVendors, useUploadInvoice, getListInvoicesQueryKey, getListVendorsQueryKey } from "@workspace/api-client-react";
+import { useCreateInvoice, useListVendors, useUploadInvoice, getGetDashboardStatsQueryKey, getListInvoicesQueryKey, getListVendorsQueryKey } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { Plus, Upload } from "lucide-react";
 
@@ -82,6 +82,8 @@ export function AddInvoiceDialog() {
           }
         );
         queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["autopilot-status"] });
         setOpen(false);
         form.reset();
       },

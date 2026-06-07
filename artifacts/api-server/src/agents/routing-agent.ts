@@ -13,6 +13,13 @@ export async function runRoutingAgent(
 ): Promise<RoutingDecision> {
   logger.info({ riskLevel: risk.riskLevel, amount, approvalMode }, "Running routing agent");
 
+  if (approvalMode === "manual") {
+    if (risk.riskLevel === "high" || amount > thresholds.cfoReviewThreshold) {
+      return { action: "cfo_review", reasoning: "Manual mode: routed to CFO for human approval", confidence: risk.confidence };
+    }
+    return { action: "manager_review", reasoning: "Manual mode: routed to AP manager for human approval", confidence: risk.confidence };
+  }
+
   if (approvalMode === "auto") {
     if (risk.riskLevel === "low" && amount <= thresholds.autoApproveThreshold) {
       return { action: "approve", reasoning: "Auto mode: low risk and within auto-approve threshold", confidence: 90 };

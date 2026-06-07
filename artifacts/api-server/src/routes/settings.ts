@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { triggerAutopilotSoon } from "../agents/autopilot-agent";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,7 @@ router.patch("/settings", async (req, res): Promise<void> => {
   }
 
   const [updated] = await db.update(settingsTable).set(updates).where(eq(settingsTable.id, settings.id)).returning();
+  if (updated.approvalMode === "auto") triggerAutopilotSoon();
   res.json(serialize(updated));
 });
 

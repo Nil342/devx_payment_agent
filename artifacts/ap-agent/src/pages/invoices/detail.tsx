@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   useGetInvoice, useAnalyzeInvoice, useGetVendorIntelligence,
-  useUpdateInvoice, useListExceptions, useListMemoryEvents,
+  useUpdateInvoice, useListDecisions, useListExceptions, useListMemoryEvents,
   getGetInvoiceQueryKey, getGetVendorIntelligenceQueryKey,
   getListInvoicesQueryKey, getGetDashboardStatsQueryKey,
-  getListExceptionsQueryKey, getListMemoryEventsQueryKey
+  getListDecisionsQueryKey, getListExceptionsQueryKey, getListMemoryEventsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Shell } from "@/components/layout/Shell";
@@ -37,7 +37,7 @@ export default function InvoiceDetailPage({ id }: Props) {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
   const { data: invoice, isLoading } = useGetInvoice(id, {
-    query: { queryKey: getGetInvoiceQueryKey(id) }
+    query: { queryKey: getGetInvoiceQueryKey(id), refetchInterval: 2_500 }
   });
 
   const { data: intelligence } = useGetVendorIntelligence(invoice?.vendorId ?? 0, {
@@ -67,11 +67,44 @@ export default function InvoiceDetailPage({ id }: Props) {
     }
   );
 
+  const { data: decisions = [] } = useListDecisions(
+    { invoiceId: id },
+    {
+      query: {
+        queryKey: getListDecisionsQueryKey({ invoiceId: id }),
+        refetchInterval: 2_500,
+      },
+    }
+  );
+
+  const persistedAnalysis: AnalysisResult | null = invoice && decisions[0] ? {
+    riskScore: invoice.riskScore ?? 0,
+    riskLevel: invoice.riskLevel,
+    confidence: decisions[0].confidence ?? 0,
+    reasoning: decisions[0].reasoning,
+    recommendation: decisions[0].reasoning,
+    agentDecision: decisions[0].action,
+    riskFactors: invoice.riskScore != null
+      ? [`Persisted agent risk score: ${invoice.riskScore}/100`]
+      : ["Persisted AP agent decision from audit log"],
+    memoryContext: memoryEvents
+      .filter((m) => m.invoiceId === id)
+      .slice(0, 4)
+      .map((m) => m.content),
+    vendorIntelligence: intelligence?.summary ?? null,
+  } : null;
+
+  const displayedAnalysis = analysisResult ?? persistedAnalysis;
+
   const analyze = useAnalyzeInvoice({
     mutation: {
       onSuccess: (result) => {
         setAnalysisResult(result);
         qc.invalidateQueries({ queryKey: getGetInvoiceQueryKey(id) });
+        qc.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListDecisionsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListMemoryEventsQueryKey() });
         toast({ title: "Analysis complete", description: "AI agent has assessed this invoice." });
       },
       onError: () => toast({ title: "Analysis failed", description: "Could not run AI analysis.", variant: "destructive" }),
@@ -254,48 +287,48 @@ export default function InvoiceDetailPage({ id }: Props) {
               </Button>
             </div>
 
-            {analysisResult ? (
+            {displayedAnalysis ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-muted/30 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground">Risk Score</p>
                     <p className={`text-2xl font-bold mt-1 ${
-                      analysisResult.riskScore >= 70 ? "text-red-600" :
-                      analysisResult.riskScore >= 40 ? "text-amber-600" : "text-emerald-600"
-                    }`}>{analysisResult.riskScore}/100</p>
+                      displayedAnalysis.riskScore >= 70 ? "text-red-600" :
+                      displayedAnalysis.riskScore >= 40 ? "text-amber-600" : "text-emerald-600"
+                    }`}>{displayedAnalysis.riskScore}/100</p>
                   </div>
                   <div className="bg-muted/30 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground">Risk Level</p>
-                    <Badge className={`mt-2 text-xs border ${riskBg(analysisResult.riskLevel)}`}>{analysisResult.riskLevel}</Badge>
+                    <Badge className={`mt-2 text-xs border ${riskBg(displayedAnalysis.riskLevel)}`}>{displayedAnalysis.riskLevel}</Badge>
                   </div>
                   <div className="bg-muted/30 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground">Confidence</p>
-                    <p className="text-2xl font-bold mt-1 text-foreground">{analysisResult.confidence}%</p>
+                    <p className="text-2xl font-bold mt-1 text-foreground">{displayedAnalysis.confidence}%</p>
                   </div>
                 </div>
 
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Agent Decision</p>
-                  <Badge className={`text-xs px-2.5 py-1 border ${actionBg(analysisResult.agentDecision)}`}>
-                    {analysisResult.agentDecision.replace(/_/g, " ").toUpperCase()}
+                  <Badge className={`text-xs px-2.5 py-1 border ${actionBg(displayedAnalysis.agentDecision)}`}>
+                    {displayedAnalysis.agentDecision.replace(/_/g, " ").toUpperCase()}
                   </Badge>
                 </div>
 
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Reasoning</p>
-                  <p className="text-sm text-foreground bg-muted/30 rounded-lg p-3">{analysisResult.reasoning}</p>
+                  <p className="text-sm text-foreground bg-muted/30 rounded-lg p-3">{displayedAnalysis.reasoning}</p>
                 </div>
 
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Recommendation</p>
-                  <p className="text-sm text-foreground bg-muted/30 rounded-lg p-3">{analysisResult.recommendation}</p>
+                  <p className="text-sm text-foreground bg-muted/30 rounded-lg p-3">{displayedAnalysis.recommendation}</p>
                 </div>
 
-                {analysisResult.riskFactors.length > 0 && (
+                {displayedAnalysis.riskFactors.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Risk Factors</p>
                     <div className="space-y-1.5">
-                      {analysisResult.riskFactors.map((f, i) => (
+                      {displayedAnalysis.riskFactors.map((f, i) => (
                         <div key={i} className="flex items-start gap-2 text-sm text-foreground">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
                           {f}
@@ -305,11 +338,11 @@ export default function InvoiceDetailPage({ id }: Props) {
                   </div>
                 )}
 
-                {(analysisResult.memoryContext ?? []).length > 0 && (
+                {(displayedAnalysis.memoryContext ?? []).length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Memory Context</p>
                     <div className="space-y-1.5">
-                      {(analysisResult.memoryContext ?? []).map((m, i) => (
+                      {(displayedAnalysis.memoryContext ?? []).map((m, i) => (
                         <div key={i} className="flex items-start gap-2 text-sm text-foreground bg-blue-50/60 rounded-lg p-2.5">
                           <Brain className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
                           {m}

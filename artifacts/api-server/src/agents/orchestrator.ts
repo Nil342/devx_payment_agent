@@ -1,4 +1,4 @@
-import { db, invoicesTable, vendorsTable, decisionsTable, exceptionsTable, settingsTable } from "@workspace/db";
+import { db, invoicesTable, decisionsTable, exceptionsTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { retrieveVendorMemory, writeMemoryEvent, updateVendorStats } from "./memory-agent";
 import { runRiskAgent, calculateBasicRisk } from "./risk-agent";
@@ -50,6 +50,7 @@ export async function orchestrateInvoiceAnalysis(invoiceId: number): Promise<Age
     logger.warn({ err }, "Groq risk agent failed, using basic risk calculation");
     risk = calculateBasicRisk(Number(invoice.amount), vendorMemory);
   }
+  risk = applyConfiguredRiskBands(risk, Number(settings.highRiskThreshold));
 
   const routing = await runRoutingAgent(risk, Number(invoice.amount), settings.approvalMode, {
     autoApproveThreshold: Number(settings.autoApproveThreshold),
@@ -70,7 +71,7 @@ export async function orchestrateInvoiceAnalysis(invoiceId: number): Promise<Age
     .set({
       riskLevel: risk.riskLevel,
       riskScore: String(risk.riskScore),
-      status: routing.action === "approve" ? "approved" : routing.action === "reject" ? "rejected" : "flagged",
+      status: statusForRoutingAction(routing.action),
       assignedReviewer: routing.action === "cfo_review" ? "CFO" : routing.action === "manager_review" ? "Manager" : null,
     })
     .where(eq(invoicesTable.id, invoiceId));
@@ -107,11 +108,6 @@ export async function orchestrateInvoiceAnalysis(invoiceId: number): Promise<Age
 
   await updateVendorStats(invoice.vendorId);
 
-  await db
-    .update(vendorsTable)
-    .set({ totalInvoices: vendorMemory.totalInvoices + 1 })
-    .where(eq(vendorsTable.id, invoice.vendorId));
-
   const memoryContext = vendorMemory.recentExceptions
     .slice(0, 3)
     .map((e) => `[${e.severity}] ${e.type}: ${e.description}`);
@@ -129,5 +125,33 @@ export async function orchestrateInvoiceAnalysis(invoiceId: number): Promise<Age
     riskFactors: risk.riskFactors,
     memoryContext,
     vendorIntelligence: `Trust Score: ${vendorMemory.trustScore}/100, Dispute Rate: ${vendorMemory.disputeRate}%`,
+  };
+}
+
+function statusForRoutingAction(action: string): string {
+  if (action === "approve") return "approved";
+  if (action === "reject") return "rejected";
+  if (action === "manager_review") return "manager_review";
+  if (action === "cfo_review") return "cfo_review";
+  return "flagged";
+}
+
+function applyConfiguredRiskBands<T extends { riskScore: number; riskLevel: "low" | "medium" | "high"; riskFactors: string[] }>(
+  risk: T,
+  highRiskThreshold: number,
+): T {
+  const high = Number.isFinite(highRiskThreshold) ? Math.max(1, Math.min(100, highRiskThreshold)) : 70;
+  const medium = Math.max(25, Math.round(high * 0.6));
+  const riskLevel = risk.riskScore >= high ? "high" : risk.riskScore >= medium ? "medium" : "low";
+
+  if (riskLevel === risk.riskLevel) return risk;
+
+  return {
+    ...risk,
+    riskLevel,
+    riskFactors: [
+      ...risk.riskFactors,
+      `Risk level adjusted by configured high-risk threshold (${high}/100)`,
+    ],
   };
 }

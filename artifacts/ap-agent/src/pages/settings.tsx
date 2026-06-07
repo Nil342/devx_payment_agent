@@ -9,11 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Settings as SettingsIcon } from "lucide-react";
+import { useAutopilotStatus, useRunAutopilot } from "@/hooks/use-autopilot";
+import { Activity, Play, Save, Settings as SettingsIcon } from "lucide-react";
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: autopilot } = useAutopilotStatus();
+  const runAutopilot = useRunAutopilot();
 
   const { data: settings, isLoading } = useGetSettings({
     query: { queryKey: getGetSettingsQueryKey() }
@@ -45,6 +48,7 @@ export default function SettingsPage() {
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        qc.invalidateQueries({ queryKey: ["autopilot-status"] });
         toast({ title: "Settings saved", description: "AP Agent configuration updated." });
       },
       onError: () => toast({ title: "Save failed", variant: "destructive" }),
@@ -95,9 +99,39 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Hybrid mode uses AI to auto-approve low-risk invoices and escalate high-risk ones.
+                  Fully Automatic mode runs the AP agent in the background and updates invoices, memory, and audit decisions in real time.
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-sm border border-border/60 rounded-xl p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">Autopilot Status</h2>
+                </div>
+                <p className="text-sm font-medium text-foreground">
+                  {!autopilot ? "Loading autopilot status" : autopilot.enabled ? (autopilot.running ? "Running invoice analysis" : "Standing by for pending invoices") : "Disabled"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pending: {autopilot?.pendingInvoices ?? 0} · Processing: {autopilot?.processingInvoices ?? 0} · Completed this session: {autopilot?.processedTotal ?? 0}
+                </p>
+                {autopilot?.lastError && (
+                  <p className="text-xs text-red-600 mt-2">Last issue: {autopilot.lastError}</p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2 bg-white/70"
+                disabled={!autopilot?.enabled || runAutopilot.isPending}
+                onClick={() => runAutopilot.mutate()}
+              >
+                <Play className="w-4 h-4" />
+                Run Now
+              </Button>
             </div>
           </div>
 

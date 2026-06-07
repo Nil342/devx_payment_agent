@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, invoicesTable, vendorsTable, decisionsTable, exceptionsTable, settingsTable, memoryEventsTable } from "@workspace/db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { orchestrateInvoiceAnalysis } from "../agents/orchestrator";
+import { getAutopilotStatus, triggerAutopilotSoon } from "../agents/autopilot-agent";
 import { runOcrAgent } from "../agents/ocr-agent";
 import multer from "multer";
 import { logger } from "../lib/logger";
@@ -97,6 +98,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     .leftJoin(vendorsTable, eq(invoicesTable.vendorId, vendorsTable.id))
     .where(eq(invoicesTable.id, invoice.id));
 
+  triggerAutopilotSoon();
   res.status(201).json(serializeInvoice(full[0]));
 });
 
@@ -142,6 +144,15 @@ router.post("/invoices/:id/analyze", async (req, res): Promise<void> => {
 
   const analysis = await orchestrateInvoiceAnalysis(id);
   res.json(analysis);
+});
+
+router.get("/autopilot/status", async (_req, res): Promise<void> => {
+  res.json(await getAutopilotStatus());
+});
+
+router.post("/autopilot/run", async (_req, res): Promise<void> => {
+  triggerAutopilotSoon();
+  res.status(202).json(await getAutopilotStatus());
 });
 
 router.post("/invoices/upload", upload.single("file"), async (req, res): Promise<void> => {
@@ -207,7 +218,7 @@ router.get("/dashboard/stats", async (_req, res): Promise<void> => {
     totalInvoices: invoices.length,
     pendingInvoices: invoices.filter((i) => i.status === "pending").length,
     approvedInvoices: invoices.filter((i) => i.status === "approved").length,
-    flaggedInvoices: invoices.filter((i) => ["flagged", "cfo_review", "manager_review"].includes(i.status)).length,
+    flaggedInvoices: invoices.filter((i) => ["flagged", "cfo_review", "manager_review", "processing"].includes(i.status)).length,
     totalAmount: invoices.reduce((s, i) => s + Number(i.amount), 0),
     riskDistribution: {
       low: invoices.filter((i) => i.riskLevel === "low").length,
