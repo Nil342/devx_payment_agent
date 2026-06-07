@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Accounts Payable Agent API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: vendors
+    description: Vendor management
+  - name: invoices
+    description: Invoice management
+  - name: agents
+    description: AI agent operations
+  - name: memory
+    description: Memory events
+  - name: exceptions
+    description: Exception management
+  - name: decisions
+    description: Decision records
+  - name: settings
+    description: Application settings
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +37,868 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /vendors:
+    get:
+      operationId: listVendors
+      tags: [vendors]
+      summary: List all vendors
+      responses:
+        "200":
+          description: List of vendors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vendor"
+    post:
+      operationId: createVendor
+      tags: [vendors]
+      summary: Create a vendor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  /vendors/{id}:
+    get:
+      operationId: getVendor
+      tags: [vendors]
+      summary: Get vendor by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateVendor
+      tags: [vendors]
+      summary: Update vendor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  /vendors/{id}/intelligence:
+    get:
+      operationId: getVendorIntelligence
+      tags: [vendors]
+      summary: Get vendor intelligence summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vendor intelligence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorIntelligence"
+
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List invoices
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: vendorId
+          in: query
+          schema:
+            type: integer
+        - name: riskLevel
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create invoice (manual entry)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get invoice by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateInvoice
+      tags: [invoices]
+      summary: Update invoice status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /invoices/{id}/analyze:
+    post:
+      operationId: analyzeInvoice
+      tags: [agents]
+      summary: Run AI agent analysis on invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceAnalysis"
+
+  /invoices/upload:
+    post:
+      operationId: uploadInvoice
+      tags: [invoices]
+      summary: Upload invoice text for OCR extraction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrInput"
+      responses:
+        "200":
+          description: Extracted invoice data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrResult"
+
+  /exceptions:
+    get:
+      operationId: listExceptions
+      tags: [exceptions]
+      summary: List exceptions
+      parameters:
+        - name: vendorId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of exceptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exception"
+    post:
+      operationId: createException
+      tags: [exceptions]
+      summary: Create exception record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExceptionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exception"
+
+  /decisions:
+    get:
+      operationId: listDecisions
+      tags: [decisions]
+      summary: List decisions
+      parameters:
+        - name: invoiceId
+          in: query
+          schema:
+            type: integer
+        - name: vendorId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Decision"
+    post:
+      operationId: createDecision
+      tags: [decisions]
+      summary: Record a decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+
+  /memory:
+    get:
+      operationId: listMemoryEvents
+      tags: [memory]
+      summary: List memory events
+      parameters:
+        - name: vendorId
+          in: query
+          schema:
+            type: integer
+        - name: eventType
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of memory events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemoryEvent"
+    post:
+      operationId: createMemoryEvent
+      tags: [memory]
+      summary: Create memory event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryEvent"
+
+  /memory/search:
+    post:
+      operationId: searchMemory
+      tags: [memory]
+      summary: Semantic search over memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemorySearchInput"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemoryEvent"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [invoices]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get app settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    Vendor:
+      type: object
+      required: [id, name, status, trustScore, disputeRate, totalInvoices, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        status:
+          type: string
+        trustScore:
+          type: number
+        disputeRate:
+          type: number
+        totalInvoices:
+          type: integer
+        totalAmount:
+          type: number
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    VendorInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        category:
+          type: string
+        notes:
+          type: string
+
+    VendorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        trustScore:
+          type: number
+        notes:
+          type: string
+
+    VendorIntelligence:
+      type: object
+      required: [vendorId, summary, riskFactors, paymentBehavior, disputeHistory, recommendations]
+      properties:
+        vendorId:
+          type: integer
+        summary:
+          type: string
+        riskFactors:
+          type: array
+          items:
+            type: string
+        paymentBehavior:
+          type: string
+        disputeHistory:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        recentExceptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Exception"
+
+    Invoice:
+      type: object
+      required: [id, vendorId, invoiceNumber, amount, status, riskLevel, createdAt]
+      properties:
+        id:
+          type: integer
+        vendorId:
+          type: integer
+        vendorName:
+          type: ["string", "null"]
+        invoiceNumber:
+          type: string
+        invoiceDate:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        amount:
+          type: number
+        taxAmount:
+          type: ["number", "null"]
+        paymentTerms:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+        riskLevel:
+          type: string
+        riskScore:
+          type: ["number", "null"]
+        assignedReviewer:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        extractedData:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    InvoiceInput:
+      type: object
+      required: [vendorId, invoiceNumber, amount]
+      properties:
+        vendorId:
+          type: integer
+        invoiceNumber:
+          type: string
+        invoiceDate:
+          type: string
+        dueDate:
+          type: string
+        amount:
+          type: number
+        taxAmount:
+          type: number
+        paymentTerms:
+          type: string
+        description:
+          type: string
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        riskLevel:
+          type: string
+        riskScore:
+          type: number
+        assignedReviewer:
+          type: string
+        description:
+          type: string
+
+    InvoiceAnalysis:
+      type: object
+      required: [invoiceId, riskScore, riskLevel, confidence, reasoning, recommendation, riskFactors, agentDecision]
+      properties:
+        invoiceId:
+          type: integer
+        riskScore:
+          type: number
+        riskLevel:
+          type: string
+        confidence:
+          type: number
+        reasoning:
+          type: string
+        recommendation:
+          type: string
+        agentDecision:
+          type: string
+        riskFactors:
+          type: array
+          items:
+            type: string
+        memoryContext:
+          type: array
+          items:
+            type: string
+        vendorIntelligence:
+          type: ["string", "null"]
+
+    OcrInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    OcrResult:
+      type: object
+      required: [vendorName, invoiceNumber, amount]
+      properties:
+        vendorName:
+          type: string
+        invoiceNumber:
+          type: string
+        invoiceDate:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        amount:
+          type: number
+        taxAmount:
+          type: ["number", "null"]
+        paymentTerms:
+          type: ["string", "null"]
+        rawText:
+          type: ["string", "null"]
+
+    Exception:
+      type: object
+      required: [id, vendorId, invoiceId, type, description, severity, createdAt]
+      properties:
+        id:
+          type: integer
+        vendorId:
+          type: integer
+        vendorName:
+          type: ["string", "null"]
+        invoiceId:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        type:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+        resolved:
+          type: boolean
+        resolvedAt:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ExceptionInput:
+      type: object
+      required: [vendorId, invoiceId, type, description, severity]
+      properties:
+        vendorId:
+          type: integer
+        invoiceId:
+          type: integer
+        type:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+        notes:
+          type: string
+
+    Decision:
+      type: object
+      required: [id, invoiceId, vendorId, action, reasoning, madeBy, createdAt]
+      properties:
+        id:
+          type: integer
+        invoiceId:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        vendorId:
+          type: integer
+        vendorName:
+          type: ["string", "null"]
+        action:
+          type: string
+        reasoning:
+          type: string
+        madeBy:
+          type: string
+        confidence:
+          type: ["number", "null"]
+        agentVersion:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    DecisionInput:
+      type: object
+      required: [invoiceId, vendorId, action, reasoning, madeBy]
+      properties:
+        invoiceId:
+          type: integer
+        vendorId:
+          type: integer
+        action:
+          type: string
+        reasoning:
+          type: string
+        madeBy:
+          type: string
+        confidence:
+          type: number
+        agentVersion:
+          type: string
+
+    MemoryEvent:
+      type: object
+      required: [id, vendorId, eventType, content, createdAt]
+      properties:
+        id:
+          type: integer
+        vendorId:
+          type: integer
+        vendorName:
+          type: ["string", "null"]
+        invoiceId:
+          type: ["integer", "null"]
+        eventType:
+          type: string
+        content:
+          type: string
+        importance:
+          type: ["number", "null"]
+        tags:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    MemoryEventInput:
+      type: object
+      required: [vendorId, eventType, content]
+      properties:
+        vendorId:
+          type: integer
+        invoiceId:
+          type: integer
+        eventType:
+          type: string
+        content:
+          type: string
+        importance:
+          type: number
+        tags:
+          type: string
+
+    MemorySearchInput:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        vendorId:
+          type: integer
+        limit:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalInvoices, pendingInvoices, approvedInvoices, flaggedInvoices, totalAmount, riskDistribution, recentActivity, topVendors, exceptionTrends]
+      properties:
+        totalInvoices:
+          type: integer
+        pendingInvoices:
+          type: integer
+        approvedInvoices:
+          type: integer
+        flaggedInvoices:
+          type: integer
+        totalAmount:
+          type: number
+        riskDistribution:
+          type: object
+          properties:
+            low:
+              type: integer
+            medium:
+              type: integer
+            high:
+              type: integer
+          required: [low, medium, high]
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        topVendors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Vendor"
+        exceptionTrends:
+          type: array
+          items:
+            type: object
+            required: [month, count]
+            properties:
+              month:
+                type: string
+              count:
+                type: integer
+
+    Settings:
+      type: object
+      required: [id, approvalMode, autoApproveThreshold, cfoReviewThreshold, managerReviewThreshold, highRiskThreshold]
+      properties:
+        id:
+          type: integer
+        approvalMode:
+          type: string
+        autoApproveThreshold:
+          type: number
+        cfoReviewThreshold:
+          type: number
+        managerReviewThreshold:
+          type: number
+        highRiskThreshold:
+          type: number
+        notificationsEnabled:
+          type: boolean
+        updatedAt:
+          type: string
+
+    SettingsUpdate:
+      type: object
+      properties:
+        approvalMode:
+          type: string
+        autoApproveThreshold:
+          type: number
+        cfoReviewThreshold:
+          type: number
+        managerReviewThreshold:
+          type: number
+        highRiskThreshold:
+          type: number
+        notificationsEnabled:
+          type: boolean
