@@ -4,10 +4,11 @@ import { useListInvoices, getListInvoicesQueryKey } from "@workspace/api-client-
 import { Shell } from "@/components/layout/Shell";
 import { formatCurrency, formatDate, riskBg, statusBg } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search } from "lucide-react";
+import { LayoutDashboard, RefreshCw, Search } from "lucide-react";
 import { AddInvoiceDialog } from "./add-invoice-dialog";
 
 function getInitialFilter(name: string, fallback = "all"): string {
@@ -21,7 +22,7 @@ export default function InvoicesPage() {
   const [riskFilter, setRiskFilter] = useState(() => getInitialFilter("riskLevel"));
   const [search, setSearch] = useState("");
 
-  const { data: invoices = [], isLoading } = useListInvoices(
+  const { data: invoices = [], isLoading, isFetching, refetch } = useListInvoices(
     {
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       ...(riskFilter !== "all" ? { riskLevel: riskFilter } : {}),
@@ -45,6 +46,25 @@ export default function InvoicesPage() {
     <Shell
       title="Invoice Inbox"
       subtitle={`${filtered.length} invoice${filtered.length !== 1 ? "s" : ""}`}
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={() => setLocation("/")} className="gap-2 bg-white/70">
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-2 bg-white/70"
+            data-testid="button-refresh-invoices"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </>
+      }
     >
       <div className="flex gap-3 mb-6">
         <div className="relative flex-1 max-w-sm">

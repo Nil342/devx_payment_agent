@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateInvoice, useListVendors, useUploadInvoice, getGetDashboardStatsQueryKey, getListInvoicesQueryKey, getListVendorsQueryKey } from "@workspace/api-client-react";
 import { toast } from "sonner";
-import { Plus, Upload } from "lucide-react";
+import { CheckCircle2, Plus, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +44,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function AddInvoiceDialog() {
   const [open, setOpen] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: vendors = [] } = useListVendors({
@@ -67,10 +68,11 @@ export function AddInvoiceDialog() {
     },
   });
 
-  const { mutate: createInvoice, isPending } = useCreateInvoice({
+  const { mutateAsync: createInvoice, isPending } = useCreateInvoice({
     mutation: {
       onSuccess: (data) => {
         toast.success("Invoice created successfully");
+        setShowSuccess(true);
         // Update the main list cache directly to show the new invoice instantly
         queryClient.setQueryData(
           getListInvoicesQueryKey({ status: undefined, riskLevel: undefined }),
@@ -82,31 +84,36 @@ export function AddInvoiceDialog() {
           }
         );
         queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListVendorsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
         queryClient.invalidateQueries({ queryKey: ["autopilot-status"] });
-        setOpen(false);
-        form.reset();
-      },
-      onError: (error) => {
-        toast.error("Failed to create invoice");
-        console.error("Create invoice error:", error);
+        window.setTimeout(() => {
+          setOpen(false);
+          setShowSuccess(false);
+          form.reset();
+        }, 1100);
       },
     },
   });
 
-  function onSubmit(data: FormValues) {
-    createInvoice({
-      data: {
-        vendorId: parseInt(data.vendorId, 10),
-        invoiceNumber: data.invoiceNumber,
-        amount: parseFloat(data.amount),
-        description: data.description || "",
-        invoiceDate: data.invoiceDate || new Date().toISOString().split('T')[0],
-        dueDate: data.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        taxAmount: data.taxAmount ? parseFloat(data.taxAmount) : 0,
-        paymentTerms: data.paymentTerms || "Net 30",
-      },
-    });
+  async function onSubmit(data: FormValues) {
+    try {
+      await createInvoice({
+        data: {
+          vendorId: parseInt(data.vendorId, 10),
+          invoiceNumber: data.invoiceNumber,
+          amount: parseFloat(data.amount),
+          description: data.description || "",
+          invoiceDate: data.invoiceDate || new Date().toISOString().split('T')[0],
+          dueDate: data.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          taxAmount: data.taxAmount ? parseFloat(data.taxAmount) : 0,
+          paymentTerms: data.paymentTerms || "Net 30",
+        },
+      });
+    } catch (error) {
+      toast.error("Failed to create invoice");
+      console.error("Create invoice error:", error);
+    }
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,7 +151,10 @@ export function AddInvoiceDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      setOpen(nextOpen);
+      if (!nextOpen) setShowSuccess(false);
+    }}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="w-4 h-4 mr-2" />
@@ -159,6 +169,17 @@ export function AddInvoiceDialog() {
           </DialogDescription>
         </DialogHeader>
         
+        {showSuccess ? (
+          <div className="flex min-h-[360px] flex-col items-center justify-center py-12 text-center">
+            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-100 animate-in zoom-in-50 duration-300">
+              <CheckCircle2 className="h-11 w-11" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">Invoice created</h3>
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+              The inbox, dashboard, and vendor intelligence totals are refreshing now.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-2">
           <div className="flex flex-col h-full">
             <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-muted/50 transition-colors min-h-[300px]">
@@ -328,6 +349,7 @@ export function AddInvoiceDialog() {
         </Form>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

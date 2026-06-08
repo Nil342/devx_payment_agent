@@ -71,7 +71,7 @@ function StatCard({
 
 export default function DashboardPage() {
   const [, setLocation] = useLocation();
-  const { data: stats, isLoading } = useGetDashboardStats({
+  const { data: stats, isLoading, isFetching, refetch } = useGetDashboardStats({
     query: { queryKey: getGetDashboardStatsQueryKey(), refetchInterval: 3_000 }
   });
 
@@ -101,6 +101,9 @@ export default function DashboardPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLocation("/memory")} className="gap-2 bg-white/70">
             <Brain className="h-4 w-4" /> Memory
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-2 bg-white/70">
+            <Activity className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Refresh
           </Button>
           <Button size="sm" onClick={() => setLocation("/invoices")} className="gap-2">
             <FileText className="h-4 w-4" /> Invoices

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, vendorsTable, exceptionsTable, decisionsTable, memoryEventsTable } from "@workspace/db";
+import { db, vendorsTable, invoicesTable, exceptionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { retrieveVendorMemory } from "../agents/memory-agent";
 import { callGroq } from "../agents/groq-client";
@@ -7,8 +7,11 @@ import { callGroq } from "../agents/groq-client";
 const router: IRouter = Router();
 
 router.get("/vendors", async (req, res): Promise<void> => {
-  const vendors = await db.select().from(vendorsTable).orderBy(desc(vendorsTable.createdAt));
-  res.json(vendors.map(serializeVendor));
+  const [vendors, invoiceStats] = await Promise.all([
+    db.select().from(vendorsTable).orderBy(desc(vendorsTable.createdAt)),
+    getInvoiceStatsByVendor(),
+  ]);
+  res.json(vendors.map((vendor) => serializeVendor(vendor, invoiceStats.get(vendor.id))));
 });
 
 router.post("/vendors", async (req, res): Promise<void> => {
@@ -26,7 +29,8 @@ router.get("/vendors/:id", async (req, res): Promise<void> => {
 
   const [vendor] = await db.select().from(vendorsTable).where(eq(vendorsTable.id, id));
   if (!vendor) { res.status(404).json({ error: "Vendor not found" }); return; }
-  res.json(serializeVendor(vendor));
+  const invoiceStats = await getInvoiceStatsByVendor(id);
+  res.json(serializeVendor(vendor, invoiceStats.get(id)));
 });
 
 router.patch("/vendors/:id", async (req, res): Promise<void> => {
@@ -80,12 +84,32 @@ router.get("/vendors/:id/intelligence", async (req, res): Promise<void> => {
   });
 });
 
-function serializeVendor(v: typeof vendorsTable.$inferSelect) {
+async function getInvoiceStatsByVendor(vendorId?: number) {
+  const rows = await db
+    .select({
+      vendorId: invoicesTable.vendorId,
+      amount: invoicesTable.amount,
+    })
+    .from(invoicesTable)
+    .where(vendorId ? eq(invoicesTable.vendorId, vendorId) : undefined);
+
+  const stats = new Map<number, { totalInvoices: number; totalAmount: number }>();
+  for (const row of rows) {
+    const current = stats.get(row.vendorId) ?? { totalInvoices: 0, totalAmount: 0 };
+    current.totalInvoices += 1;
+    current.totalAmount += Number(row.amount);
+    stats.set(row.vendorId, current);
+  }
+  return stats;
+}
+
+function serializeVendor(v: typeof vendorsTable.$inferSelect, invoiceStats?: { totalInvoices: number; totalAmount: number }) {
   return {
     ...v,
     trustScore: Number(v.trustScore),
     disputeRate: Number(v.disputeRate),
-    totalAmount: Number(v.totalAmount),
+    totalInvoices: invoiceStats?.totalInvoices ?? 0,
+    totalAmount: invoiceStats?.totalAmount ?? 0,
     createdAt: v.createdAt.toISOString(),
     updatedAt: v.updatedAt.toISOString(),
   };

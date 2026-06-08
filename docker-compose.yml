@@ -1,29 +1,38 @@
-version: '3.8'
-
 services:
   backend:
+    image: ap-agent-backend:latest
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: workspace_backend
+    container_name: ap_agent_backend
     environment:
-      - NODE_ENV=production
-      - PORT=4000
-    # Additional required environment variables (e.g. GEMINI_API_KEY, GROQ_API_KEY)
-    # can be loaded from an env file or injected here.
+      NODE_ENV: production
+      PORT: 4000
     env_file:
       - .env
     ports:
-      - "4001:4000"
+      - "4000:4000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:4000/api/health').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1))
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   frontend:
+    image: ap-agent-frontend:latest
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: workspace_frontend
+    container_name: ap_agent_frontend
     ports:
-      - "8888:80"
+      - "8080:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped

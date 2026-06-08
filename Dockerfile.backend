@@ -45,6 +45,9 @@ COPY --from=builder /app /app
 
 WORKDIR /app/artifacts/api-server
 
+# Ensure the uploads path exists for the Express static mount.
+RUN mkdir -p public/uploads
+
 # Expose port 4000 (standard for the API server based on vite config proxy)
 EXPOSE 4000
 
