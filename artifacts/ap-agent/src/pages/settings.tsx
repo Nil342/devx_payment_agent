@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAutopilotStatus, useRunAutopilot } from "@/hooks/use-autopilot";
-import { Activity, Play, Save, Settings as SettingsIcon } from "lucide-react";
+import { Activity, Play, Save, Settings as SettingsIcon, Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -126,11 +126,20 @@ export default function SettingsPage() {
                 type="button"
                 variant="outline"
                 className="gap-2 bg-white/70"
-                disabled={!autopilot?.enabled || runAutopilot.isPending}
+                disabled={!autopilot?.enabled || runAutopilot.isPending || autopilot?.running}
                 onClick={() => runAutopilot.mutate()}
               >
-                <Play className="w-4 h-4" />
-                Run Now
+                {runAutopilot.isPending || autopilot?.running ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Run Now
+                  </>
+                )}
               </Button>
             </div>
           </div>
